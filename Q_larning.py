@@ -71,27 +71,28 @@ for episode in range(num_episodes):  #試行数分繰り返す
  
     for t in range(max_number_of_steps):  #1試行のループ
         if islearned == 1:  #学習終了したらcartPoleを描画する
+            isrender=1
             env.render()
             time.sleep(0.1)
             print (observation[0])  #カートのx位置を出力
- 
+
         # 行動a_tの実行により、s_{t+1}, r_{t}などを計算する
         observation, reward, done, info = env.step(action)
- 
+        
         # 報酬を設定し与える
-        if done:
-            if t < 195:
+        if done: #ゲームオーバ　True or Flase　で、　True（ゲームオーバ：こけたの場合）
+            if t < 195:#195回連続でこけなかった場合
                 reward = -200  #こけたら罰則
             else:
                 reward = 1  #立ったまま終了時は罰則はなし
         else:
-            reward = 1  #各ステップで立ってたら報酬追加
+            reward = 1  #各ステップで立ってたら報酬追加→ゲームオーバーになっていない：こけてない
  
         episode_reward += reward  #報酬を追加
  
         # 離散状態s_{t+1}を求め、Q関数を更新する
         next_state = digitize_state(observation)  #t+1での観測状態を、離散値に変換
-        q_table = update_Qtable(q_table, state, action, reward, next_state)
+        q_table = update_Qtable(q_table, state, action, reward, next_state) #qテーブルを更新 1ステップごとに
         
         #  次の行動a_{t+1}を求める 
         action = get_action(next_state, episode)    # a_{t+1} 
@@ -99,29 +100,30 @@ for episode in range(num_episodes):  #試行数分繰り返す
         state = next_state
         
         #終了時の処理
-        if done:
-            print('%d Episode finished after %f time steps / mean %f' %
-                  (episode, t + 1, total_reward_vec.mean()))
-            total_reward_vec = np.hstack((total_reward_vec[1:],
+        if done:#ゲームオーバ　True or Flase　で、　True（ゲームオーバ：こけたの場合）
+            print( str(episode) + 'Episode finished after' + str(t+1)+'time steps' +
+                ' total_reward_mean'+str(total_reward_vec.mean()) ) # total_reward_vec.mean()は全エピソードの報酬の平均
+            
+            total_reward_vec = np.hstack((total_reward_vec[1:],#np.hstackは配列の連結
                                           episode_reward))  #報酬を記録
+#             print(total_reward_vec)
             if islearned == 1:  #学習終わってたら最終のx座標を格納
                 final_x[episode, 0] = observation[0]
             break
- 
-    if (total_reward_vec.mean() >=
-            goal_average_reward):  # 直近の100エピソードが規定報酬以上であれば成功
+
+    if (total_reward_vec.mean() >=goal_average_reward):  # 直近の100エピソードが規定報酬以上であれば成功
         print('Episode %d train agent successfuly!' % episode)
         islearned = 1
-        #np.savetxt('learned_Q_table.csv',q_table, delimiter=",") #Qtableの保存する場合
-        if isrender == 0:
-            #env = wrappers.Monitor(env, './movie/cartpole-experiment-1') #動画保存する場合
-            isrender = 1
+        np.savetxt('learned_Q_table.csv',q_table, delimiter=",") #Qtableの保存する場合
+        # if isrender == 0:
+            # env = wrappers.Monitor(env, './movie/cartpole-experiment-1') #動画保存する場合
+            # isrender = 1
     #10エピソードだけでどんな挙動になるのか見たかったら、以下のコメントを外す
-    if episode>10:
-       if isrender == 0:
-           env = wrappers.Monitor(env, './movie/cartpole-experiment-1') #動画保存する場合
-           isrender = 1
-       islearned=1
- 
+    # if episode>10:
+    #     islearned = 1
+
+    if islearned==1 and isrender==1:
+        break
+
 if islearned:
     np.savetxt('final_x.csv', final_x, delimiter=",")
